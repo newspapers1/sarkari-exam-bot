@@ -1,0 +1,8 @@
+python-telegram-bot==20.7
+Flask==2.3.3
+pytz
+APScheduler
+fpdf2
+requests
+beautifulsoup4
+lxml
