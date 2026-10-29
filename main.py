@@ -9,14 +9,12 @@ from telegram.ext import Application, CommandHandler, CallbackQueryHandler, Cont
 from telegram.constants import ParseMode
 from apscheduler.schedulers.background import BackgroundScheduler
 
-# ===== AAPKA SETTING =====
+# ===== AAPKA FINAL SETTING =====
 BOT_TOKEN = os.getenv("BOT_TOKEN","").strip()
 CHANNEL_ID = "@AllGovernmentExamAlerts"
 CHANNEL_LINK = "https://t.me/AllGovernmentExamAlerts"
-GROUP_ID = os.getenv("GROUP_ID","").strip()
-
 POST_MODE = os.getenv("POST_MODE","both") # both / bot_only / channel_only
-FORCE_JOIN = True # True = Channel join karna padega
+FORCE_JOIN = True
 IST = pytz.timezone('Asia/Kolkata')
 
 PERSIST_DIR = Path("/data") if Path("/data").exists() else Path(".")
@@ -37,7 +35,7 @@ def start_loop():
 threading.Thread(target=start_loop, daemon=True).start()
 application = Application.builder().token(BOT_TOKEN).build()
 
-# ===== ALL EXAMS OFFICIAL SOURCES - 30+ =====
+# ===== ALL EXAM SOURCES - 30+ OFFICIAL =====
 SOURCES = [
     {"name": "UPSC", "url": "https://upsc.gov.in/whats-new", "type": "upsc"},
     {"name": "SSC", "url": "https://ssc.gov.in/", "type": "ssc"},
@@ -68,11 +66,11 @@ async def force_join_message(update: Update):
 # ===== ANALYSIS + PDF =====
 def analyze_job(title):
     t=title.lower()
-    qual="Graduation"; 
+    qual="Graduation"
     if "10th" in t or "matric" in t: qual="10th Pass"
     elif "12th" in t: qual="12th Pass"
     elif "iti" in t: qual="ITI Pass"
-    age="18-28 Years"; 
+    age="18-28 Years"
     if "police" in t: age="18-25 (Bihar Police), 18-28 (SSC GD)"
     elif "upsc" in t: age="21-32 Years"
     sel="Written + Physical/Interview"
@@ -101,14 +99,14 @@ async def check_and_post():
                 if not href.startswith('http'): href=src['url'].rstrip('/')+'/'+href.lstrip('/')
                 if href in seen: continue
                 analysis=analyze_job(title); pdf_path=create_pdf(title, href, analysis)
-                caption=f"🚨 **NEW {src['type'].upper()} ALERT!**\n\n📌 **{title}**\n🏢 **{src['name']}**\n\n📊 **Full Details:**\n🎓 **Qualification:** {analysis['qual']}\n🎂 **Age:** {analysis['age']}\n📝 **Selection:** {analysis['selection']}\n💰 **Salary:** {analysis['salary']}\n\n📥 **Niche 2 PDF hai:**\n1. Official Notification (Link)\n2. Analysis PDF (Bot banayega)\n\n⏰ {datetime.datetime.now(IST).strftime('%d-%m-%Y %I:%M %p')}"
+                caption=f"🚨 **NEW {src['type'].upper()} ALERT!**\n\n📌 **{title}**\n🏢 **{src['name']}**\n\n📊 **Full Details:**\n🎓 **Qualification:** {analysis['qual']}\n🎂 **Age:** {analysis['age']}\n📝 **Selection:** {analysis['selection']}\n💰 **Salary:** {analysis['salary']}\n\n📥 **Niche 2 PDF hai:**\n1. Official Notification (Link)\n2. Analysis PDF (Bot)\n\n⏰ {datetime.datetime.now(IST).strftime('%d-%m-%Y %I:%M %p')}"
                 kb=[[InlineKeyboardButton("📄 Official PDF - Official Site", url=href)],
                     [InlineKeyboardButton("🔍 Full Syllabus + Details", callback_data=f"detail_{src['type']}")]]
                 if POST_MODE in ["both","channel_only"]:
                     try:
                         with open(pdf_path,"rb") as f:
                             await application.bot.send_document(chat_id=CHANNEL_ID, document=f, caption=caption, reply_markup=InlineKeyboardMarkup(kb), parse_mode=ParseMode.MARKDOWN)
-                    except: 
+                    except:
                         try: await application.bot.send_message(chat_id=CHANNEL_ID, text=caption, reply_markup=InlineKeyboardMarkup(kb), parse_mode=ParseMode.MARKDOWN)
                         except: pass
                 if POST_MODE in ["both","bot_only"]:
@@ -118,7 +116,7 @@ async def check_and_post():
                 seen.append(href); save_json(SEEN_FILE,seen)
         except Exception as e: print(f"Fail {src['name']} {e}")
 
-# ===== COLOURFUL BUTTON - PATLIPUTRA JAISA =====
+# ===== COLOURFUL BUTTONS - PATLIPUTRA JAISA =====
 def main_keyboard():
     kb=[
         [KeyboardButton("🔍 Search Job by City/Name")],
@@ -133,11 +131,41 @@ def main_keyboard():
     ]
     return ReplyKeyboardMarkup(kb, resize_keyboard=True)
 
+# ===== PREMIUM WELCOME IMAGE + NAME + FULL DETAILS =====
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if FORCE_JOIN and not await is_joined(update.effective_user.id, ctx.bot):
         await force_join_message(update); return
-    txt=f"👋 **Hello, {update.effective_user.first_name}!**\n\n**Welcome to Sarkari Exam Alert India Bot!**\n\nYe bot aapko **All Govt Exam, Vacancy, Admit Card, Result, Answer Key, Syllabus** ka turant alert dega.\n\nJaise hi koi notification ayega - Turant Analysis karke PDF + Full Details yahan aur {CHANNEL_ID} pe aa jayega.\n\n👇 **Select an option below to get started!**"
-    await update.message.reply_text(txt, reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
+    user_name = update.effective_user.first_name
+    caption = f"""
+👋 **Hello, {user_name}!**
+
+**Welcome to Sarkari Exam Alert India Bot!**
+**@SarkariExamAlertIndiaBot**
+
+**📢 Channel: @AllGovernmentExamAlerts**
+
+**🎯 All Government Exams at One Place - Instant Alert!**
+
+**Bot pe kya kya hai:**
+🔥 **Latest Vacancy 2026** - SSC, UPSC, Railway, Banking, Police, Teaching, BPSC, BSSC
+📄 **Admit Card** - All Exams ka turant download
+🎓 **Result + Cutoff** - Full Analysis ke saath
+📊 **Full Notification PDF** - Official + Hamara Analysis PDF
+🔔 **Daily Alert** - Har 5 min me official site check
+💰 **Salary Details** - Post wise salary, DA, HRA
+📚 **Syllabus + Answer Key** - Full details
+🧮 **Age / Eligibility Calculator**
+
+**📍 Covered:**
+SSC • UPSC • Railway • Banking • Police • Teaching • BPSC • Army • Navy
+
+**👇 Niche colourful buttons se select karo!**
+"""
+    try:
+        with open("welcome.jpg", "rb") as photo:
+            await update.message.reply_photo(photo=photo, caption=caption, reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
+    except:
+        await update.message.reply_text(caption, reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
 
 async def handle_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     if FORCE_JOIN and not await is_joined(update.effective_user.id, ctx.bot):
@@ -173,7 +201,15 @@ async def handle_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     q=update.callback_query; await q.answer(); data=q.data
     if data=="check_join":
         if await is_joined(q.from_user.id, ctx.bot):
-            await q.message.delete(); await q.message.reply_text("✅ **Join Ho Gaya! Ab full access!**", reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
+            await q.message.delete()
+            # Force join ke baad welcome image dubara bhejo
+            user_name = q.from_user.first_name
+            caption = f"✅ **Join Ho Gaya {user_name}! Ab full access!**\n\n👇 Niche se chuno - All Vacancy, Admit Card, Result!"
+            try:
+                with open("welcome.jpg", "rb") as photo:
+                    await q.message.reply_photo(photo=photo, caption=caption, reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
+            except:
+                await q.message.reply_text(caption, reply_markup=main_keyboard(), parse_mode=ParseMode.MARKDOWN)
         else: await q.answer("❌ Abhi join nahi kiya! Pehle join karo!", show_alert=True)
         return
     if data.startswith("cat_"):
